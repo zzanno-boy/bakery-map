@@ -9,6 +9,16 @@
   "background_color": "#FFFBF2",
   "theme_color": "#FFFBF2",
   "lang": "ko",
+  "share_target": {
+    "action": "./index.html",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
   "icons": [
     {
       "src": "icons/icon-192.png",

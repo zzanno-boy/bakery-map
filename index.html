@@ -133,7 +133,12 @@ ul{list-style:none;margin:0;padding:0}
 .row:first-child{border-top:0}
 .row:hover{background:var(--paper-2)}
 .row.is-sel{background:var(--paper-2)}
-.row .dot{width:26px;height:26px;border-radius:50%;margin-top:2px;background:var(--c);color:var(--pin-ring);display:flex;align-items:center;justify-content:center}
+.row .dot{width:26px;height:26px;border-radius:50%;margin-top:2px;background:var(--c);color:var(--pin-ring);display:flex;align-items:center;justify-content:center;position:relative}
+.row .dot.has-ph{width:44px;height:44px;border-radius:12px;overflow:visible;background:var(--paper-3)}
+.row .dot.has-ph img{width:100%;height:100%;object-fit:cover;border-radius:12px;display:block}
+.row .dot.has-ph svg{position:absolute;right:-5px;bottom:-5px;width:11px;height:11px;padding:3px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px var(--paper)}
+.row:has(.dot.has-ph){grid-template-columns:44px 1fr auto}
+.row .thumb{display:none}
 .row .dot svg{width:17px;height:17px}
 .row .main{display:flex;flex-direction:column;min-width:0}
 .row .name{font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px;min-width:0}
@@ -350,6 +355,14 @@ textarea.memo::placeholder{color:var(--ink-3)}
 
 /* desktop */
 @media (min-width:900px){
+  .row{grid-template-columns:26px 1fr auto 60px}
+  .row:has(.dot.has-ph){grid-template-columns:26px 1fr auto 60px}
+  .row .dot.has-ph{width:26px;height:26px;border-radius:50%;background:var(--c)}
+  .row .dot.has-ph img{display:none}
+  .row .dot.has-ph svg{position:static;width:17px;height:17px;padding:0;background:none;box-shadow:none}
+  .row .thumb{display:block;width:60px;height:60px;border-radius:12px;overflow:hidden;background:var(--paper-3);border:1px solid var(--line)}
+  .row .thumb:empty{display:none}
+  .row .thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .top{right:auto;width:var(--rail-w);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
   #sheet{right:auto;width:var(--rail-w);top:var(--head-h);height:auto;border-radius:0;box-shadow:none;border-right:1px solid var(--line);transform:none!important;transition:none}
   .handle{display:none}
@@ -556,6 +569,7 @@ const ratingOf = id => store.mine.ratings[id] || 0;
 
 
 /* ───────────── app state ───────────── */
+let THUMBS = {}; // placeId → url (공용 사진 또는 내 사진)
 const ui = { filter: 'all', q: '', sort: 'near', inview: false, sel: null, sheet: 'peek', mode: 'list', formFor: null, showHidden: false, useMe: false };
 let ME = null; // { lat, lng, acc, t }
 let PLACES = allPlaces();
@@ -840,13 +854,14 @@ function renderList() {
   } else {
     ul.innerHTML = list.map(({ p, d }) => `
       <li><button class="row${p.id === ui.sel ? ' is-sel' : ''}" data-id="${esc(p.id)}" style="--c:${colorOf(p)}">
-        <span class="dot">${glyphSvg(primaryTag(p))}</span>
+        <span class="dot${thumbOf(p) ? ' has-ph' : ''}">${thumbOf(p) ? `<img src="${esc(thumbOf(p))}" alt="" loading="lazy">` : ''}${glyphSvg(primaryTag(p))}</span>
         <span class="main">
           <span class="name">${esc(p.name)}${isNew(p) ? '<span class="new">NEW</span>' : ''}${isFav(p.id) ? '<span class="fav" aria-label="즐겨찾기">♥</span>' : ''}${isVisited(p.id) ? '<span class="vis">가봄</span>' : ''}${ratingOf(p.id) ? `<span class="star">★${ratingOf(p.id)}</span>` : ''}</span>
           <span class="sub">${esc(p.area)} · ${esc(p.gu)}${p.since ? ` · ${p.since}년` : ''}</span>
           <span class="items">${esc((p.items || []).slice(0, 3).join(' · '))}</span>
         </span>
         <span class="dist"><b>${fmtDist(d)}</b>${fmtWalk(d)}</span>
+        <span class="thumb">${thumbOf(p) ? `<img src="${esc(thumbOf(p))}" alt="" loading="lazy">` : ''}</span>
       </button></li>`).join('');
   }
   const hc = hiddenCount();
@@ -864,9 +879,9 @@ function mapLinks(p) {
 function renderDetail() {
   const p = byId(ui.sel); const el = $('#panel-detail');
   if (!p) { el.innerHTML = ''; return; }
-  const links = mapLinks(p);
+  const links = mapLinks(p); const pl = placeLinks(p);
   const tags = (p.tags || []).map(t => `<span class="tag" style="--sw:${TAGS[t]?.c}"><span class="gl">${glyphSvg(t)}</span>${esc(TAGS[t]?.l || t)}</span>`).join('');
-  const items = (p.items || []).map(i => `<a class="bread${isFilled(i) ? ' hit' : ''}" href="${imgSearch(p.name + ' ' + i)}" target="_blank" rel="noopener">${esc(i)}</a>`).join('');
+  const items = (p.items || []).map(i => `<a class="bread${isFilled(i) ? ' hit' : ''}" href="${pl.kakaoMenu || pl.naverMenu}" target="_blank" rel="noopener">${esc(i)}</a>`).join('');
   el.innerHTML = `
     <div class="detail">
       <div class="d-top">
@@ -877,16 +892,16 @@ function renderDetail() {
       <h2 class="d-name"><span class="swatch" style="--c:${colorOf(p)}">${glyphSvg(primaryTag(p))}</span>${esc(p.name)}${isNew(p) ? '<span class="new">NEW</span>' : ''}</h2>
       <div class="d-meta">${esc(p.area)} · ${esc(p.gu)}${p.since ? ` <span class="since">· ${p.since}년부터</span>` : ''}${p.base ? '' : ' <span class="since">· 내가 추가</span>'}${p.added ? ` <span class="since">· ${fmtAdded(p.added)}</span>` : ''}</div>
       <div class="tags">${tags}</div>
-      ${items ? `<div class="d-sec"><h3>대표 빵</h3><div class="bread-list">${items}</div><p class="bread-hint">빵 이름을 누르면 사진 검색이 열려요.</p></div>` : ''}
+      ${items ? `<div class="d-sec"><h3>대표 빵</h3><div class="bread-list">${items}</div><p class="bread-hint">${pl.hasKakao ? '빵 이름을 누르면 카카오맵 메뉴·사진이 열려요.' : '빵 이름을 누르면 지도 앱에서 가게를 찾아 줘요.'}</p></div>` : ''}
       ${p.note ? `<div class="d-sec"><p class="d-note">${esc(p.note)}</p></div>` : ''}
       <div class="d-sec"><h3>주소</h3><div class="addr"><span class="t">${esc(p.addr || '주소 없음')}${p.base && !store.edits[p.id]?.lat ? '<span class="approx">핀 위치는 주소 기준 대략값이에요. 길찾기는 지도앱 버튼으로.</span>' : ''}</span>${p.addr ? '<button class="mini-btn" id="d-copy-addr">복사</button>' : ''}</div></div>
       <div class="actions">
         <button class="act" id="d-fav" aria-pressed="${isFav(p.id)}"><svg viewBox="0 0 24 24" fill="${isFav(p.id) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 20.5s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 8a4.2 4.2 0 0 1 7.5 2.5c0 5.4-7.5 10-7.5 10z"/></svg>즐겨찾기</button>
         <button class="act" id="d-visited" aria-pressed="${isVisited(p.id)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>가본 곳</button>
-        <a class="act link" href="${links.naver}" target="_blank" rel="noopener">네이버지도</a>
-        <a class="act link" href="${links.kakao}" target="_blank" rel="noopener">카카오맵</a>
-        <a class="act link" href="${imgSearch(p.name + ' 빵')}" target="_blank" rel="noopener">사진 보기</a>
-        <a class="act link" href="${instaUrl(p.name)}" target="_blank" rel="noopener">인스타그램</a>
+        <a class="act link" href="${pl.naverMenu}" target="_blank" rel="noopener">${pl.hasNaver ? '네이버 메뉴·사진' : '네이버 지도에서 보기'}</a>
+        <a class="act link" href="${pl.kakaoMenu || pl.kakaoHome}" target="_blank" rel="noopener">${pl.hasKakao ? '카카오 메뉴·사진' : '카카오맵에서 보기'}</a>
+        ${pl.hasKakao ? `<a class="act link" href="${pl.kakaoPhoto}" target="_blank" rel="noopener">카카오 사진</a><a class="act link" href="${pl.kakaoReview}" target="_blank" rel="noopener">카카오 후기</a>` : ''}
+        ${pl.hasNaver ? `<a class="act link" href="${pl.naverPhoto}" target="_blank" rel="noopener">네이버 사진</a><a class="act link" href="${pl.naverReview}" target="_blank" rel="noopener">네이버 리뷰</a>` : ''}
         <button class="act wide" id="d-share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></svg>카톡에 보낼 소개글 복사</button>
       </div>
       ${(p.tips || []).length ? `<div class="d-sec"><h3>많이 하는 말</h3><ul class="tips">${p.tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>` : ''}
@@ -894,6 +909,7 @@ function renderDetail() {
       ${(p.photos || []).length ? `<div class="d-sec"><h3>사진</h3><div class="strip">${p.photos.map(u => `<button type="button" class="strip-ph" data-u="${esc(u)}" aria-label="사진 크게 보기"><img src="${esc(u)}" alt="" loading="lazy"></button>`).join('')}</div></div>` : ''}
       ${idb.ok ? `<div class="d-sec"><h3>내 사진</h3><div class="photos" id="d-photos"></div><input type="file" id="d-photo-in" accept="image/*" multiple hidden><p class="photos-note">직접 찍은 빵 사진. 이 폰에만 저장돼요.</p></div>` : ''}
       <div class="d-sec"><h3>메모</h3><textarea class="memo" id="d-memo" placeholder="먹어 본 빵, 다음에 사 올 것, 같이 간 날…">${esc(store.mine.notes[p.id] || '')}</textarea></div>
+      ${(!pl.hasNaver || !pl.hasKakao) ? `<p class="photos-note" style="margin-top:12px">${!pl.hasNaver && !pl.hasKakao ? '네이버·카카오' : !pl.hasNaver ? '네이버' : '카카오'} 가게 링크를 '정보 수정'에 붙여 넣으면 메뉴·사진·리뷰 탭으로 바로 들어가요.</p>` : ''}
       <div class="manage">
         <button id="d-edit">정보 수정</button>
         <button id="d-move">핀 위치 고치기</button>
@@ -907,7 +923,7 @@ function renderDetail() {
   $('#d-fav').addEventListener('click', () => { if (isFav(p.id)) delete store.mine.favs[p.id]; else store.mine.favs[p.id] = true; saveMine(); refreshData(); toast(isFav(p.id) ? '즐겨찾기에 넣었어요' : '즐겨찾기에서 뺐어요'); });
   $('#d-visited').addEventListener('click', () => { if (isVisited(p.id)) delete store.mine.visited[p.id]; else store.mine.visited[p.id] = true; saveMine(); refreshData(); toast(isVisited(p.id) ? '가본 곳으로 표시했어요' : '표시를 지웠어요'); });
   $('#d-share').addEventListener('click', () => {
-    const lines = [`🍞 ${p.name} (${p.area})`, (p.items || []).slice(0, 4).join(', '), p.note || '', p.addr ? `서울 ${p.addr}` : '', links.naver].filter(Boolean);
+    const lines = [`🍞 ${p.name} (${p.area})`, (p.items || []).slice(0, 4).join(', '), p.note || '', p.addr ? `서울 ${p.addr}` : '', pl.hasKakao ? pl.kakaoHome : pl.naverHome].filter(Boolean);
     copyText(lines.join('\n'), '소개글을 복사했어요. 카톡에 붙여 넣으세요');
   });
   $('#d-stars').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { const n = +b.dataset.n; if (ratingOf(p.id) === n) delete store.mine.ratings[p.id]; else store.mine.ratings[p.id] = n; saveMine(); refreshData(); }));
@@ -960,23 +976,29 @@ function deselect() {
 }
 
 /* ───────────── form (추가 / 수정 / 위치 고치기) ───────────── */
-function openForm(p, { moveOnly = false } = {}) {
+function openForm(p, { moveOnly = false, prefill = null } = {}) {
   ui.formFor = p ? p.id : null;
+  const pf = prefill || {};
   const isNew = !p;
   const el = $('#panel-form');
   const tagPick = TAG_ORDER.map(t => `<label style="--sw:${TAGS[t].c}"><input type="checkbox" name="tags" value="${t}" ${(p?.tags || []).includes(t) ? 'checked' : ''}><span class="gl">${glyphSvg(t)}</span>${TAGS[t].l}</label>`).join('');
-  const guOpts = GU_NAMES.map(g => `<option ${p?.gu === g ? 'selected' : ''}>${g}</option>`).join('');
+  const pfGu = !p && pf.addr ? GU_NAMES.find(g => pf.addr.includes(g)) : null;
+  const guOpts = GU_NAMES.map(g => `<option ${(p ? p.gu === g : pfGu === g) ? 'selected' : ''}>${g}</option>`).join('');
   el.innerHTML = `
     <form class="form" id="place-form" novalidate>
       <div class="d-top"><button type="button" class="icon-btn" id="f-back" aria-label="돌아가기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2>${moveOnly ? '핀 위치 고치기' : isNew ? '빵집 추가' : '정보 수정'}</h2></div>
       <div class="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span>지도를 움직여 가운데 표시를 빵집 자리에 맞춘 뒤 저장하세요. 확대할수록 정확해요.</span></div>
       <div ${moveOnly ? 'hidden' : ''}>
-        <div class="field"><label for="f-name">이름</label><input id="f-name" name="name" value="${esc(p?.name || '')}" placeholder="예: 어글리베이커리" required maxlength="40"></div>
+        <div class="field"><label for="f-name">이름</label><input id="f-name" name="name" value="${esc(p?.name || pf.name || '')}" placeholder="예: 어글리베이커리" required maxlength="40"></div>
         <div class="two">
           <div class="field"><label for="f-area">동네</label><input id="f-area" name="area" value="${esc(p?.area || '')}" placeholder="예: 망원" maxlength="20"></div>
           <div class="field"><label for="f-gu">구</label><select id="f-gu" name="gu">${guOpts}</select></div>
         </div>
-        <div class="field"><label for="f-addr">주소 <small>(선택, '서울' 빼고)</small></label><input id="f-addr" name="addr" value="${esc(p?.addr || '')}" placeholder="예: 마포구 월드컵로13길 73" maxlength="80"></div>
+        <div class="field"><label for="f-addr">주소 <small>(선택, '서울' 빼고)</small></label><input id="f-addr" name="addr" value="${esc(p?.addr || pf.addr || '')}" placeholder="예: 마포구 월드컵로13길 73" maxlength="80"></div>
+        <div class="two">
+          <div class="field"><label for="f-naver">네이버 지도 링크 <small>(선택)</small></label><input id="f-naver" name="naver" value="${esc(p?.naver ? 'https://m.place.naver.com/restaurant/' + p.naver : (p?.naverUrl || pf.naver || ''))}" placeholder="가게 공유 링크 붙여넣기" inputmode="url"></div>
+          <div class="field"><label for="f-kakao">카카오맵 링크 <small>(선택)</small></label><input id="f-kakao" name="kakao" value="${esc(p?.kakao ? 'https://place.map.kakao.com/' + p.kakao : (p?.kakaoUrl || pf.kakao || ''))}" placeholder="가게 공유 링크 붙여넣기" inputmode="url"></div>
+        </div>
         <div class="field"><label>분류</label><div class="tagpick">${tagPick}</div></div>
         <div class="field"><label for="f-items">대표 빵 <small>(쉼표로 구분)</small></label><input id="f-items" name="items" value="${esc((p?.items || []).join(', '))}" placeholder="예: 크림빵, 초코 크루아상" maxlength="200"></div>
         <div class="two">
@@ -992,6 +1014,7 @@ function openForm(p, { moveOnly = false } = {}) {
   $('#crosshair').hidden = false; $('#crosshair-tip').textContent = isNew ? '새 빵집 자리' : p.name;
   showHint(isNew ? '지도를 움직여 빵집 자리를 가운데 표시에 맞추세요' : '지도를 움직여 핀을 옮기세요');
   if (p) { setTimeout(() => centerOn(p.lat, p.lng, Math.max(zoomLevel(), 20)), 50); }
+  else if (pf.lat && pf.lng) { setTimeout(() => centerOn(pf.lat, pf.lng, 20), 50); }
   else if (zoomLevel() < 12) { const [lat, lng] = viewCenterLatLng(); setTimeout(() => centerOn(lat, lng, 14), 50); }
   updateCrosshair();
   const close = () => { $('#crosshair').hidden = true; showHint(null); ui.formFor = null; if (p) { setMode('detail'); renderDetail(); } else { deselect(); } };
@@ -1014,6 +1037,10 @@ function openForm(p, { moveOnly = false } = {}) {
       note: (fd.get('note') || '').trim(), lat: +lat.toFixed(5), lng: +lng.toFixed(5)
     };
     const since = parseInt(fd.get('since'), 10); if (since > 1800 && since < 2100) data.since = since;
+    const nl = parsePlaceLink(fd.get('naver')), kl = parsePlaceLink(fd.get('kakao'));
+    if (nl.naver) data.naver = nl.naver; else if (nl.naverUrl) data.naverUrl = nl.naverUrl;
+    if (kl.kakao) data.kakao = kl.kakao; else if (kl.kakaoUrl) data.kakaoUrl = kl.kakaoUrl;
+    if (nl.kakao && !data.kakao) data.kakao = nl.kakao; if (kl.naver && !data.naver) data.naver = kl.naver;
     if (!data.tags.length) data.tags = ['cafe'];
     if (isNew) {
       const id = uid(); data.createdAt = new Date().toISOString(); data.added = data.createdAt.slice(0, 10);
@@ -1084,7 +1111,18 @@ async function shrinkImage(file) {
   c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
   return new Promise(res => c.toBlob(b => res(b || file), 'image/jpeg', .82));
 }
-let photoUrls = [], lbPhoto = null;
+let photoUrls = [], lbPhoto = null, thumbUrls = [];
+const thumbOf = p => (p.photos && p.photos[0]) || THUMBS[p.id] || '';
+async function refreshThumbs() {
+  if (!idb.ok) return;
+  try {
+    const d = await idb.open();
+    const all = await new Promise((res, rej) => { const q = d.transaction('photos').objectStore('photos').getAll(); q.onsuccess = () => res(q.result || []); q.onerror = () => rej(q.error); });
+    thumbUrls.forEach(u => URL.revokeObjectURL(u)); thumbUrls = []; const next = {};
+    all.sort((a, b) => a.ts - b.ts).forEach(r => { if (!next[r.place]) { const u = URL.createObjectURL(r.blob); thumbUrls.push(u); next[r.place] = u; } });
+    THUMBS = next; if (ui.mode === 'list') renderList();
+  } catch { }
+}
 function revokePhotos() { photoUrls.forEach(u => URL.revokeObjectURL(u)); photoUrls = []; }
 async function renderPhotos(placeId) {
   const box = $('#d-photos'); if (!box) return;
@@ -1105,7 +1143,7 @@ $('#lb-del').addEventListener('click', async e => {
   const b = e.currentTarget;
   if (!b.dataset.arm) { b.dataset.arm = '1'; b.textContent = '정말 삭제할까요?'; setTimeout(() => { if (b.dataset.arm) { b.dataset.arm = ''; b.textContent = '삭제'; } }, 3000); return; }
   if (lbPhoto) { try { await idb.del(lbPhoto.id); } catch { } }
-  closeLightbox(); if (ui.sel) renderPhotos(ui.sel); toast('사진을 지웠어요');
+  closeLightbox(); if (ui.sel) renderPhotos(ui.sel); refreshThumbs(); toast('사진을 지웠어요');
 });
 async function addPhotos(placeId, files) {
   let n = 0;
@@ -1114,9 +1152,36 @@ async function addPhotos(placeId, files) {
     try { const blob = await shrinkImage(f); await idb.put({ id: uid(), place: placeId, blob, ts: Date.now() }); n++; }
     catch (e) { console.warn('photo', e); }
   }
-  if (n) { toast(n > 1 ? `사진 ${n}장을 넣었어요` : '사진을 넣었어요'); renderPhotos(placeId); } else toast('사진을 저장하지 못했어요');
+  if (n) { toast(n > 1 ? `사진 ${n}장을 넣었어요` : '사진을 넣었어요'); renderPhotos(placeId); refreshThumbs(); } else toast('사진을 저장하지 못했어요');
 }
 const imgSearch = q => `https://search.naver.com/search.naver?where=image&query=${encodeURIComponent(q)}`;
+/* 네이버·카카오 연결. 번호가 있으면 가게 페이지의 탭으로 바로, 없으면 지도 앱 검색으로 */
+function placeLinks(p) {
+  const q = `${p.name} ${p.area || p.gu || ''}`.trim();
+  const kakao = p.kakao ? `https://place.map.kakao.com/${p.kakao}` : (p.kakaoUrl || null);
+  const naver = p.naver ? `https://m.place.naver.com/restaurant/${p.naver}` : (p.naverUrl || null);
+  return {
+    naverHome: naver || `https://map.naver.com/p/search/${encodeURIComponent(q)}`,
+    naverMenu: p.naver ? naver + '/menu/list' : (naver || `https://map.naver.com/p/search/${encodeURIComponent(q)}`),
+    naverPhoto: p.naver ? naver + '/photo' : null,
+    naverReview: p.naver ? naver + '/review/visitor' : null,
+    kakaoHome: kakao || `https://map.kakao.com/?q=${encodeURIComponent(q)}`,
+    kakaoMenu: p.kakao ? kakao + '#menuInfo' : null,
+    kakaoPhoto: p.kakao ? kakao + '#photoview' : null,
+    kakaoReview: p.kakao ? kakao + '#review' : null,
+    hasKakao: !!p.kakao, hasNaver: !!p.naver
+  };
+}
+/* 붙여 넣은 링크에서 가게 번호 뽑기 */
+function parsePlaceLink(s) {
+  s = (s || '').trim(); if (!s) return {};
+  let m;
+  if ((m = s.match(/place\.map\.kakao\.com\/(?:m\/)?(\d+)/))) return { kakao: m[1] };
+  if (/kko\.to\/|map\.kakao\.com/.test(s)) return { kakaoUrl: s.match(/https?:\/\/\S+/)?.[0] || s };
+  if ((m = s.match(/place\.naver\.com\/(?:restaurant|cafe|place|hairshop|accommodation|hospital)\/(\d+)/)) || (m = s.match(/map\.naver\.com\/p\/entry\/place\/(\d+)/)) || (m = s.match(/place\.naver\.com\/[a-z]+\/(\d+)/))) return { naver: m[1] };
+  if (/naver\.me\/|map\.naver\.com|m\.place\.naver\.com/.test(s)) return { naverUrl: s.match(/https?:\/\/\S+/)?.[0] || s };
+  return {};
+}
 const instaUrl = name => `https://www.instagram.com/explore/tags/${encodeURIComponent(name.replace(/\s+/g, ''))}/`;
 
 /* ───────────── 내 위치 ───────────── */
@@ -1129,24 +1194,35 @@ function placeMe() {
   applyScale();
 }
 let locBusy = false;
-function locate() {
+function locate(silent) {
   if (!navigator.geolocation || locBusy) return;
   if (ME && Date.now() - ME.t < 60e3) { ui.useMe = true; $('#loc-btn').classList.add('on'); centerOn(ME.lat, ME.lng, Math.max(zoomLevel(), 12)); renderList(); return; }
-  locBusy = true; $('#loc-btn').classList.add('on'); toast('내 위치를 찾는 중…');
+  locBusy = true; $('#loc-btn').classList.add('on'); if (!silent) toast('내 위치를 찾는 중…');
   navigator.geolocation.getCurrentPosition(pos => {
     locBusy = false;
     const { latitude: lat, longitude: lng, accuracy: acc } = pos.coords;
     const inSeoul = lat > 37.41 && lat < 37.72 && lng > 126.75 && lng < 127.2;
     ME = { lat, lng, acc, t: Date.now() }; ui.useMe = true; placeMe();
-    if (inSeoul) { centerOn(lat, lng, Math.max(zoomLevel(), 12)); toast('내 위치로 옮겼어요'); }
-    else { toast('지금 서울 밖이에요. 목록은 내 위치 기준으로 정렬할게요'); }
+    if (inSeoul) { if (!silent || ui.mode === 'list') centerOn(lat, lng, Math.max(zoomLevel(), 12)); if (!silent) toast('내 위치로 옮겼어요'); }
+    else if (!silent) { toast('지금 서울 밖이에요. 목록은 내 위치 기준으로 정렬할게요'); }
     renderList();
   }, err => {
     locBusy = false; $('#loc-btn').classList.remove('on');
+    if (silent) return;
     toast(err.code === 1 ? '위치 권한이 꺼져 있어요. 브라우저 설정에서 허용해 주세요' : '위치를 찾지 못했어요');
   }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
 }
-$('#loc-btn').addEventListener('click', locate);
+$('#loc-btn').addEventListener('click', () => locate(false));
+/* 앱을 열 때·다시 켤 때·인터넷이 붙을 때 조용히 위치 갱신 (설정에서 끌 수 있음) */
+const autoLocOn = () => LS.get('bb.autoLoc', true);
+async function autoLocate(reason) {
+  if ($('#loc-btn').hidden || !autoLocOn()) return;
+  if (ME && Date.now() - ME.t < 2 * 60e3 && reason !== 'boot') return;
+  try { const st = await navigator.permissions?.query({ name: 'geolocation' }); if (st && st.state === 'denied') return; } catch { }
+  locate(true);
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') autoLocate('visible'); });
+window.addEventListener('online', () => autoLocate('online'));
 $('#list-sub').addEventListener('click', () => { if (ME && ui.sort === 'near') { ui.useMe = !ui.useMe; $('#loc-btn').classList.toggle('on', ui.useMe); renderList(); } });
 
 /* ───────────── refresh ───────────── */
@@ -1173,6 +1249,8 @@ window.addEventListener('resize', () => { const wasDesktop = isDesktop(); resize
 function boot(saved) {
   buildMap(); resize();
   if (navigator.geolocation && !window.claude && location.protocol === 'https:') $('#loc-btn').hidden = false;
+  refreshThumbs();
+  setTimeout(() => autoLocate('boot'), 900);
   if (saved && saved.view && saved.cw === view.cw && saved.ch === view.ch) { view.k = saved.view.k; view.tx = saved.view.tx; view.ty = saved.view.ty; }
   else fitPlaces(PLACES);
   ui.filter = saved?.filter || 'all'; ui.sort = saved?.sort || 'near';
@@ -1209,6 +1287,8 @@ function openSettings() {
       <div class="d-top"><button class="icon-btn" id="s-back" aria-label="돌아가기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2>설정</h2></div>
       <div class="s-sec"><h3>이 폰에 저장된 것</h3><div class="s-stat"><span><b>${mineN}</b>추가한 빵집</span><span><b>${favN}</b>즐겨찾기</span><span><b>${visN}</b>가본 곳</span><span><b id="s-photo-n">·</b>사진</span></div></div>
       <div class="s-sec"><h3>앱으로 설치</h3>${installHelp}</div>
+      <div class="s-sec"><h3>내 위치</h3><p>앱을 열 때와 다시 켤 때, 인터넷이 붙을 때 조용히 현재 위치를 받아 지도와 목록을 맞춰요.</p><div class="s-btns"><button class="btn" id="s-autoloc" aria-pressed="${LS.get('bb.autoLoc', true)}">${LS.get('bb.autoLoc', true) ? '자동 위치: 켜짐' : '자동 위치: 꺼짐'}</button></div></div>
+      <div class="s-sec"><h3>빵집 추가하는 법</h3><p>카카오맵이나 네이버 지도 앱에서 가게를 열고 <b>공유 → 빵집 지도</b>를 고르면 이름·주소·링크가 채워진 채로 추가 화면이 열려요(안드로이드). 아이폰은 가게 링크를 복사해 추가 화면의 링크 칸에 붙여 넣으면 돼요.</p></div>
       <div class="s-sec"><h3>다른 폰과 맞추기</h3><p>즐겨찾기·메모·추가한 빵집은 이 폰에만 저장돼요. 아래 글을 복사해 카톡으로 보내고, 받은 폰에서 붙여 넣으면 합쳐져요. (사진은 용량이 커서 안 옮겨져요.)</p>
         <div class="s-btns"><button class="btn" id="s-export">내 기록 복사</button></div>
         <textarea id="s-import" placeholder="받은 글을 여기에 붙여 넣으세요" aria-label="가져올 기록"></textarea>
@@ -1224,6 +1304,7 @@ function openSettings() {
   $('#s-back').addEventListener('click', () => { deselect(); if (!isDesktop()) setSheet('half'); });
   $('#s-export').addEventListener('click', () => copyText(exportText(), '복사했어요. 카톡에 붙여 넣어 보내세요'));
   $('#s-import-go').addEventListener('click', () => { const err = $('#s-err'); err.hidden = true; try { const n = importText($('#s-import').value.trim()); toast(`가져왔어요 (새 빵집 ${n}곳)`); $('#s-import').value = ''; openSettings(); } catch { err.textContent = '붙여 넣은 글을 읽을 수 없어요. "내 기록 복사"로 만든 글인지 확인해 주세요.'; err.hidden = false; } });
+  $('#s-autoloc').addEventListener('click', e => { const v = !LS.get('bb.autoLoc', true); LS.set('bb.autoLoc', v); e.currentTarget.textContent = v ? '자동 위치: 켜짐' : '자동 위치: 꺼짐'; e.currentTarget.setAttribute('aria-pressed', v); if (v) autoLocate('boot'); });
   $('#s-refresh').addEventListener('click', () => Promise.all([loadBase(true), loadChangelog(true)]).then(([ok]) => { toast(ok ? '목록을 새로 받았어요' : '지금은 받을 수 없어요'); if (ok) openSettings(); }));
   const sg = $('#s-gate'); if (sg) sg.addEventListener('click', () => { if (!openGate(true)) toast('이 기기에서는 브라우저 메뉴의 "홈 화면에 추가"를 써 주세요'); });
   $('#s-applink').addEventListener('click', () => copyText(SHARE_TEXT(), '복사했어요. 카톡에 붙여 넣어 보내세요'));
@@ -1360,8 +1441,21 @@ async function loadBase(force) {
   else loadBase(false);
   boot(null);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
-  const hash = location.hash; if (hash) history.replaceState(null, '', location.pathname);
+  const hash = location.hash; const qs = new URLSearchParams(location.search);
+  if (hash || location.search) history.replaceState(null, '', location.pathname);
   const force = hash === '#install';
+  if (qs.has('text') || qs.has('url') || qs.has('title')) {
+    // 카카오맵·네이버 지도 앱에서 '공유 → 빵집 지도'로 들어온 경우
+    const text = [qs.get('title') || '', qs.get('text') || '', qs.get('url') || ''].join('\n');
+    const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    const link = (text.match(/https?:\/\/\S+/) || [''])[0];
+    const parsed = parsePlaceLink(link);
+    const addrLine = lines.find(s => /(서울|서울특별시)?\s*\S+구\s+\S+(로|길|동)/.test(s) && !/^https?:/.test(s)) || '';
+    const nameLine = lines.find(s => !/^https?:/.test(s) && s !== addrLine && !/^\[?(카카오맵|네이버 ?지도)\]?/.test(s)) || '';
+    const pre = { name: nameLine.replace(/^\[.*?\]\s*/, '').slice(0, 40), addr: addrLine.replace(/^서울(특별시)?\s*/, '').slice(0, 80) };
+    if (parsed.kakao || parsed.kakaoUrl) pre.kakao = link; if (parsed.naver || parsed.naverUrl) pre.naver = link;
+    setTimeout(() => { openForm(null, { prefill: pre }); toast('지도 앱에서 받은 가게예요. 위치를 맞추고 저장하세요'); }, 400);
+  }
   loadChangelog(false).then(() => { if (hash === '#whatsnew') { markNewsSeen(); openSettings(); setTimeout(() => $('#s-log')?.scrollIntoView({ block: 'start' }), 80); } });
   setTimeout(() => openGate(force), force ? 150 : 700);
 })();
