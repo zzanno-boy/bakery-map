@@ -1,7 +1,7 @@
 /* 서울 빵집 지도 — service worker
    앱 껍데기(index.html, 목록, 아이콘)는 미리 저장해 두고, 글꼴은 처음 한 번 받을 때 저장해 둡니다.
    목록(bakeries.json)과 index.html은 인터넷이 되면 새 것을 받고, 안 되면 저장본을 씁니다. */
-const VERSION = 'bbmap-v1';
+const VERSION = 'bbmap-v2';
 const SHELL = ['./', './index.html', './bakeries.json', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

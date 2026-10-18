@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
 <title>서울 빵집 지도</title>
 <meta name="description" content="서울 빵집을 지도와 목록으로 찾고 즐겨찾기·메모를 남기는 앱">
+<meta property="og:type" content="website">
+<meta property="og:title" content="서울 빵집 지도">
+<meta property="og:description" content="크림·초코 가득한 빵집 46곳. 홈 화면에 설치해서 쓰는 지도 앱">
+<meta property="og:image" content="https://zzanno-boy.github.io/bakery-map/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://zzanno-boy.github.io/bakery-map/">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#FFFBF2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1C1612" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
@@ -258,6 +266,34 @@ textarea.memo::placeholder{color:var(--ink-3)}
 #install-bar .x{background:none;color:var(--paper);opacity:.7;font-size:18px;padding:0 4px}
 @media (min-width:900px){#install-bar{left:calc(var(--rail-w) + (100% - var(--rail-w))/2);top:16px}}
 
+/* install gate */
+#gate{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center;background:rgba(42,28,19,.42);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.gate-card{width:100%;max-width:440px;background:var(--paper);border-radius:22px 22px 0 0;padding:18px 20px calc(18px + env(safe-area-inset-bottom,0px));padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));box-shadow:0 -10px 40px rgba(0,0,0,.25);animation:gate-up .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes gate-up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.gate-head{display:flex;align-items:center;gap:12px}
+.gate-head img{width:52px;height:52px;border-radius:13px;flex:none}
+.gate-head h2{font-family:var(--font-display);font-weight:400;font-size:21px;line-height:1.15}
+.gate-head p{margin:2px 0 0;color:var(--ink-3);font-size:12.5px}
+.gate-title{margin-top:16px;font-size:16px;font-weight:800;line-height:1.3}
+.gate-sub{margin:4px 0 0;color:var(--ink-2);font-size:13.5px;line-height:1.5}
+.gate-steps{margin:14px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+.gate-steps li{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;font-size:14px;line-height:1.45}
+.gate-steps .n{width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:12.5px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums;margin-top:1px}
+.gate-steps b{font-weight:800}
+.gate-steps svg,.gate-note svg{width:17px;height:17px;vertical-align:-3px;margin:0 2px}
+.gate-note svg{width:15px;height:15px}
+.gate-steps .kbd,.gate-note .kbd{display:inline-block;padding:1px 7px;border-radius:6px;background:var(--paper-3);border:1px solid var(--line-2);font-size:12.5px;font-weight:700;white-space:nowrap}
+.gate-btn{margin-top:16px;width:100%;height:50px;border-radius:14px;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.gate-btn svg{width:20px;height:20px}
+.gate-btn.secondary{background:var(--paper-3);color:var(--ink);height:44px;font-size:14px;margin-top:8px}
+.gate-note{margin:10px 0 0;color:var(--ink-3);font-size:12px;line-height:1.5}
+.gate-later{margin-top:12px;width:100%;height:40px;color:var(--ink-3);font-size:13px;text-decoration:underline;text-underline-offset:3px}
+.gate-wait{display:flex;align-items:center;gap:8px;margin-top:16px;color:var(--ink-2);font-size:13.5px}
+.gate-wait i{width:14px;height:14px;border-radius:50%;border:2px solid var(--line-2);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (min-width:600px){#gate{align-items:center;padding:20px}.gate-card{border-radius:22px;padding-bottom:18px}}
+@media (prefers-reduced-motion:reduce){.gate-card{animation:none}.gate-wait i{animation:none}}
+
 /* desktop */
 @media (min-width:900px){
   .top{right:auto;width:var(--rail-w);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -331,6 +367,13 @@ textarea.memo::placeholder{color:var(--ink-3)}
     <div class="map-hint" id="map-hint" hidden></div>
     <div id="install-bar" hidden><span>홈 화면에 앱으로 설치할 수 있어요</span><button id="install-go">설치</button><button class="x" id="install-x" aria-label="닫기">×</button></div>
     <div id="toast" role="status" aria-live="polite"></div>
+    <div id="gate" hidden role="dialog" aria-modal="true" aria-labelledby="gate-h">
+      <div class="gate-card">
+        <div class="gate-head"><img src="./icons/icon-192.png" alt="" width="52" height="52"><div><h2 id="gate-h">서울 빵집 지도</h2><p>홈 화면에 앱으로 설치해서 써요</p></div></div>
+        <div id="gate-body"></div>
+        <button class="gate-later" id="gate-later">나중에 할게요, 먼저 둘러볼래요</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -971,7 +1014,7 @@ if (document.fonts?.ready) document.fonts.ready.then(() => { applyScale(); });
 
 /* ───────────── settings (내보내기·가져오기·설치) ───────────── */
 let installEvt = null;
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (!LS.get('bb.installDismissed', false) && !isStandalone()) $('#install-bar').hidden = false; });
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; const g = $('#gate'); if (g && !g.hidden && g.dataset.mode === 'android') openGate(true); else if (isDesktop() && !LS.get('bb.installDismissed', false) && !isStandalone()) $('#install-bar').hidden = false; });
 const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
 $('#install-go').addEventListener('click', async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $('#install-bar').hidden = true; });
@@ -989,9 +1032,8 @@ function openSettings() {
   if (ui.mode === 'form') return;
   const el = $('#panel-settings');
   const mineN = Object.keys(store.places).length, favN = Object.keys(store.mine.favs).length, visN = Object.keys(store.mine.visited).length;
-  const installHelp = isStandalone() ? '<p>이미 앱으로 설치되어 있어요.</p>'
-    : isIOS() ? '<p>아이폰은 Safari에서 열어야 설치돼요.</p><ol><li>아래 공유 버튼(네모에 화살표)을 누르고</li><li>"홈 화면에 추가"를 고르면</li><li>홈 화면에 아이콘이 생기고 전체 화면으로 열려요.</li></ol>'
-    : '<p>안드로이드는 Chrome 메뉴(⋮)에서 "앱 설치" 또는 "홈 화면에 추가"를 누르면 돼요.</p>' + (installEvt ? '<div class="s-btns"><button class="btn primary" id="s-install">지금 설치</button></div>' : '');
+  const installHelp = (isStandalone() ? '<p>이 폰에는 이미 앱으로 설치되어 있어요.</p>' : '<p>홈 화면에 넣으면 전체 화면으로 열리고, 인터넷이 안 되는 곳에서도 열려요.</p><div class="s-btns"><button class="btn primary" id="s-gate">설치 방법 보기</button></div>')
+    + '<p style="margin-top:12px">여자친구 폰에도 깔려면 아래 글을 카톡으로 보내 주세요. 링크를 열면 같은 설치 안내가 떠요.</p><div class="s-btns"><button class="btn" id="s-applink">앱 링크 복사</button></div>';
   el.innerHTML = `
     <div class="settings">
       <div class="d-top"><button class="icon-btn" id="s-back" aria-label="돌아가기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2>설정</h2></div>
@@ -1011,9 +1053,87 @@ function openSettings() {
   $('#s-export').addEventListener('click', () => copyText(exportText(), '복사했어요. 카톡에 붙여 넣어 보내세요'));
   $('#s-import-go').addEventListener('click', () => { const err = $('#s-err'); err.hidden = true; try { const n = importText($('#s-import').value.trim()); toast(`가져왔어요 (새 빵집 ${n}곳)`); $('#s-import').value = ''; openSettings(); } catch { err.textContent = '붙여 넣은 글을 읽을 수 없어요. "내 기록 복사"로 만든 글인지 확인해 주세요.'; err.hidden = false; } });
   $('#s-refresh').addEventListener('click', () => loadBase(true).then(ok => toast(ok ? '목록을 새로 받았어요' : '지금은 받을 수 없어요')));
-  const si = $('#s-install'); if (si) si.addEventListener('click', () => $('#install-go').click());
+  const sg = $('#s-gate'); if (sg) sg.addEventListener('click', () => { if (!openGate(true)) toast('이 기기에서는 브라우저 메뉴의 "홈 화면에 추가"를 써 주세요'); });
+  $('#s-applink').addEventListener('click', () => copyText(SHARE_TEXT(), '복사했어요. 카톡에 붙여 넣어 보내세요'));
 }
 $('#settings-btn').addEventListener('click', () => { if (ui.mode === 'settings') { deselect(); if (!isDesktop()) setSheet('half'); } else openSettings(); });
+
+/* ───────────── 설치 안내 (카톡 안에서 열렸을 때 / 안드로이드 / 아이폰) ───────────── */
+const UA = navigator.userAgent;
+const ENV = {
+  ios: /iPhone|iPad|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
+  android: /Android/.test(UA),
+  kakao: /KAKAOTALK/i.test(UA),
+  inapp: /KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV|FB_IAB|Line\/|DaumApps|; wv\)/i.test(UA),
+  crios: /CriOS/.test(UA),
+  samsung: /SamsungBrowser/.test(UA)
+};
+const cleanUrl = () => location.origin + location.pathname;
+const SHARE_TEXT = () => `🍞 서울 빵집 지도\n${cleanUrl()}\n링크를 열고 → "브라우저로 열기" → "설치"를 누르면 홈 화면에 앱으로 깔려요.`;
+const ICON_SHARE_IOS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg>';
+const ICON_PLUS_SQ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg>';
+const ICON_DOTS = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+const ICON_OUT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>';
+const ICON_DL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>';
+function openExternal() {
+  const u = cleanUrl();
+  if (ENV.android) {
+    // 카톡·네이버 등 안드로이드 내장 브라우저 → Chrome 으로
+    location.href = 'intent://' + location.host + location.pathname + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(u) + ';end';
+  } else if (ENV.kakao) {
+    location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(u);
+  }
+}
+function gateMode() {
+  if (isStandalone()) return null;
+  if (ENV.kakao) return 'kakao';
+  if (ENV.inapp) return 'inapp';
+  if (ENV.android) return 'android';
+  if (ENV.ios) return 'ios';
+  return null;
+}
+function gateBodyHtml(mode) {
+  const li = (n, s) => `<li><span class="n">${n}</span><span>${s}</span></li>`;
+  if (mode === 'kakao' || mode === 'inapp') {
+    const where = ENV.kakao ? '카카오톡' : '지금 쓰는 앱';
+    const browser = ENV.android ? 'Chrome' : 'Safari';
+    const btn = (ENV.android || ENV.kakao) ? `<button class="gate-btn" id="gate-ext">${ICON_OUT}${browser}으로 열기</button>` : '';
+    const manual = ENV.android
+      ? `안 열리면: 오른쪽 위(또는 아래) ${ICON_DOTS} 메뉴 → <span class="kbd">다른 브라우저로 열기</span>`
+      : `안 열리면: 아래 ${ICON_SHARE_IOS} 또는 ${ICON_DOTS} 메뉴 → <span class="kbd">Safari로 열기</span>`;
+    return `<div class="gate-title">${where} 안에서는 설치가 안 돼요</div><p class="gate-sub">${browser}에서 열면 바로 설치할 수 있어요.</p>${btn}<p class="gate-note">${manual}</p>`;
+  }
+  if (mode === 'android') {
+    if (installEvt) return `<div class="gate-title">한 번만 누르면 홈 화면에 들어가요</div><p class="gate-sub">인터넷이 안 되는 곳에서도 열리고, 주소창 없이 전체 화면으로 떠요.</p><button class="gate-btn" id="gate-install">${ICON_DL}앱 설치</button>`;
+    const menu = ENV.samsung
+      ? li(1, `아래 <span class="kbd">≡</span> 메뉴 → <b>현재 페이지 추가</b> → <b>홈 화면</b>`)
+      : li(1, `오른쪽 위 ${ICON_DOTS} 메뉴 → <b>홈 화면에 추가</b> (또는 <b>앱 설치</b>)`);
+    return `<div class="gate-title">홈 화면에 추가하면 앱처럼 열려요</div><div class="gate-wait" id="gate-wait"><i></i>설치 버튼을 준비하고 있어요…</div><ol class="gate-steps" id="gate-manual" hidden>${menu}${li(2, `<b>설치</b> 또는 <b>추가</b> 누르기`)}</ol><p class="gate-note" id="gate-manual-note" hidden>이미 설치했다면 홈 화면의 "빵집 지도" 아이콘으로 열어 주세요.</p>`;
+  }
+  if (mode === 'ios') {
+    const first = ENV.crios
+      ? li(1, `오른쪽 위 ${ICON_SHARE_IOS} <b>공유</b> 버튼`)
+      : li(1, `아래 가운데 ${ICON_SHARE_IOS} <b>공유</b> 버튼`);
+    return `<div class="gate-title">세 번만 누르면 홈 화면에 들어가요</div><p class="gate-sub">아이폰은 Safari의 공유 메뉴로 설치해요.</p><ol class="gate-steps">${first}${li(2, `아래로 내려서 ${ICON_PLUS_SQ} <b>홈 화면에 추가</b>`)}${li(3, `오른쪽 위 <b>추가</b>`)}</ol>${ENV.crios ? '' : '<p class="gate-note">공유 메뉴가 안 보이면 화면을 살짝 위로 올려 보세요.</p>'}<button class="gate-btn secondary" id="gate-ok">알겠어요</button>`;
+  }
+  return '';
+}
+let gateManualT;
+function openGate(force) {
+  const mode = gateMode(); if (!mode) return false;
+  const snoozed = LS.get('bb.gateSnooze', 0);
+  if (!force && snoozed && Date.now() - snoozed < 3 * 86400e3) return false;
+  const g = $('#gate'); $('#gate-body').innerHTML = gateBodyHtml(mode); g.hidden = false; g.dataset.mode = mode;
+  const ext = $('#gate-ext'); if (ext) ext.addEventListener('click', openExternal);
+  const ins = $('#gate-install'); if (ins) ins.addEventListener('click', async () => { if (!installEvt) return; installEvt.prompt(); const r = await installEvt.userChoice; installEvt = null; if (r && r.outcome === 'accepted') { closeGate(); toast('설치했어요. 홈 화면에서 열어 보세요'); } });
+  const ok = $('#gate-ok'); if (ok) ok.addEventListener('click', () => closeGate(true));
+  clearTimeout(gateManualT);
+  if (mode === 'android' && !installEvt) gateManualT = setTimeout(() => { const w = $('#gate-wait'); if (w) w.hidden = true; const m = $('#gate-manual'); if (m) m.hidden = false; const n = $('#gate-manual-note'); if (n) n.hidden = false; }, 2500);
+  return true;
+}
+function closeGate(snooze) { $('#gate').hidden = true; if (snooze) LS.set('bb.gateSnooze', Date.now()); }
+$('#gate-later').addEventListener('click', () => closeGate(true));
+$('#gate').addEventListener('click', e => { if (e.target === e.currentTarget) closeGate(true); });
 
 /* ───────────── base list + boot ───────────── */
 async function loadBase(force) {
@@ -1030,6 +1150,8 @@ async function loadBase(force) {
   else loadBase(false);
   boot(null);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+  const force = location.hash === '#install'; if (force) history.replaceState(null, '', location.pathname);
+  setTimeout(() => openGate(force), force ? 150 : 700);
 })();
 </script>
 </body>
